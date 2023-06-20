@@ -2,7 +2,8 @@
   "type": "module",
   "scripts": {
     "1": "node src/main.js",
-    "2": "node src/eee.js"
+    "2": "node src/eee.js",
+    "3": "node src/test.js"
   },
   "dependencies": {
     "axios": "^1.4.0",
