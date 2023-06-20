@@ -1,58 +1,42 @@
-import { Client, Events ,GatewayIntentBits } from "discord.js"
+import { Client, Events, GatewayIntentBits, SlashCommandBuilder, REST, Routes } from 'discord.js'
 import dotenv from 'dotenv'
-import rp from "request-promise"
 
 dotenv.config()
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-
-var Channel = {
-    "已提": "iitifox",
-};
-
-client.on('message', msg => {
-    if (msg.content === '開台') {
-
-        var myRequests = [];
-        let peopleNumber = 0;
-        for (name in Channel) {
-            console.log("查看: " + name + " ID: " + Channel[name]);
-            myRequests.push(rp(CheckOnlineStatus(Channel[name])));
-        }
-        Promise.all(myRequests)
-            .then((arrayOfResult) => {
-                arrayOfResult.forEach(function (result) {
-                    console.log("arrayOfResult: ", result);
-                    let resposeBody = "";
-                    resposeBody = JSON.parse(result);
-                    if (resposeBody.data.length != 0 && resposeBody.data[0].type == "live") {
-                        console.log("有開: " + resposeBody.data[0].user_name + " ID: " + Channel[resposeBody.data[0].user_name]);
-                        msg.channel.send(resposeBody.data[0].user_name + "目前有開 快去看 --> " + "https://www.twitch.tv/" + Channel[resposeBody.data[0].user_name]);
-                        peopleNumber++;
-                    }
-                });
-
-                if (peopleNumber == 0) {
-                    msg.channel.send("目前沒人開台唷~~~~");
-                }
-            })
-            .catch(/* handle error */);
-    }
+// 監聽機器人準備好的事件
+client.on(Events.ClientReady, () => {
+  console.log(`機器人已登入，目前在 ${client.guilds.cache.size} 個伺服器上`);
 });
 
-function CheckOnlineStatus(user_login) {
-    var options = {
-        url: 'https://api.twitch.tv/helix/streams?user_login=' + user_login,
-        headers: {
-            'Client-ID': process.env.TWID
-        }
-    };
-    return options;
-}
+export const command = new SlashCommandBuilder()
+    .setName('ban')
+    .setDescription('封鎖使用者')
+    .addUserOption(option =>
+        option.setName('使用者')
+            .setDescription('要封鎖的使用者')
+            .setRequired(true))
+    .addStringOption(option =>
+        option.setName('原因')
+            .setDescription('封鎖原因')
+            .setRequired(false));
 
-client.once(Events.ClientReady, c => {
-	console.log(`${c.user.tag}上線`)
-})
+export const handleInteraction = async (interaction) => {
+    if (!interaction.isCommand() || interaction.commandName !== 'ban') return;
 
-client.login(process.env.TK)
+    const user = interaction.options.getUser('使用者');
+    const reason = interaction.options.getString('原因') || '未提供原因';
+
+    try {
+        await interaction.guild.members.ban(user, { reason });
+        interaction.reply(`${user.tag} 已被成功封鎖，原因：${reason}`);
+    } catch (error) {
+        console.error(error);
+        interaction.reply('封鎖使用者時發生錯誤！');
+    }
+};
+
+
+// 登入機器人
+client.login(process.env.TOKEN);
